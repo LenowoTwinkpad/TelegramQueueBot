@@ -42,11 +42,12 @@ python bot.py
 
 - `/start` - Starts the bot
 - `/ping` - Checks if the bot is running and shows queue status
-- `/removeforced` - Removes a forced message from the queue. Its a bit of a crutch for now, will be replaced Soon(tm)
 - `/kys` - Stops the bot
 - `/dryrun` - Forwards the message back to you without posting it to test correct formatting
 - `/postnow` - Instantly posts a replied message
 - `/remove` - Removes a replied message from the queue
+
+### This bot strips all captions from attachments by default, its an intentional behavior made so to make stealing memes easier. i might change it later but no promises 
 
 #### Huge shout out to [@sethfoxen](https://github.com/sethfoxen) for the original code base and for finally making me stop using that annoying closed source bot with egotistical owners
 
