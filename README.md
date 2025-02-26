@@ -48,8 +48,6 @@ python bot.py
 - `/postnow` - Instantly posts a replied message
 - `/remove` - Removes a replied message from the queue
 
-# Huge shout out to [@sethfoxen](https://github.com/sethfoxen) for the original code base and for finally making me stop using that annoying closed source bot with egotistical owners
+#### Huge shout out to [@sethfoxen](https://github.com/sethfoxen) for the original code base and for finally making me stop using that annoying closed source bot with egotistical owners
 
-
-# Disclaimer
-Some code for this bot was Ai-generated before i stopped being a lazy dumbass and started learning python like a big boy
+#### Disclaimer: Some code for this bot was Ai-generated before i stopped being a lazy dumbass and started learning python like a big boy
