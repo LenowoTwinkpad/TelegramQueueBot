@@ -141,9 +141,9 @@ def handle_commands(message: Message):
             return
         logging.info(f"Dry running message ID {message.reply_to_message.message_id}.")
         if config["stripcaptions"]:
-            message = bot.copy_message(config["admin_id"], config["admin_id"], message_id, caption="")
+            message = bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
         else:
-            message = bot.copy_message(config["admin_id"], config["admin_id"], message_id)
+            message = bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id)
 
     elif message.text == "/postnow":
         if not message.reply_to_message:
@@ -151,9 +151,9 @@ def handle_commands(message: Message):
             return
         logging.info(f"Force posting message ID {message.reply_to_message.message_id} to the channel.")
         if config["stripcaptions"]:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
+            message = bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
         else:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
+            message = bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id)
         message_queue.remove(message.reply_to_message.message_id)
         save_queue(message_queue)
 
@@ -161,12 +161,11 @@ def handle_commands(message: Message):
         if not message.reply_to_message:
             bot.send_message(message.chat.id, "you gotta reply to a message to remove it")
             return
-        message_id_to_remove = message.reply_to_message.message_id
-        if forced_message == message_id_to_remove:
+        if forced_message == message.reply_to_message.message_id:
             forced_message = None
-        if message_id_to_remove in message_queue:
-            logging.info(f"Deleting message ID {message_id_to_remove} from the queue.")
-            message_queue.remove(message_id_to_remove)
+        if message.reply_to_message.message_id in message_queue:
+            logging.info(f"Deleting message ID {message.reply_to_message.message_id} from the queue.")
+            message_queue.remove(message.reply_to_message.message_id)
             save_queue(message_queue)
             bot.send_message(message.chat.id, "( -_•)▄︻テحكـ━一💥 KABLAM! this message was taken out back and shot.")
         else:
