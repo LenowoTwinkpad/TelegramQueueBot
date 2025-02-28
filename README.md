@@ -18,13 +18,13 @@ This Telegram bot built with pyTelegramBotAPI allows you to send posts to your T
 3. Create a `config.json` file in the same directory as `bot.py` with the following structure:
    ```json
    {
-       "bot_token": "your_bot_token",
+       "bot_token": your_bot_token,
        "admin_id": 123456789,
        "channel_id": -123456789,
        "forward_interval": 60,
        "debug_mode": false,
        "shuffle": false,
-       "removecaptions": true,
+       "removecaptions": false
    }
    ```
    - Replace `your_bot_token` with your Telegram bot token.
