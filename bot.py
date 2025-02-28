@@ -66,7 +66,7 @@ def copy_messages():
         try:
             if config["debug_mode"]:
                 logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
-                message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
+            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
             message_queue.remove(message_id)
             save_queue(message_queue)
         except Exception as e:
