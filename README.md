@@ -1,6 +1,6 @@
 ## Description
 
-This Telegram bot built with pyTelegramBotAPI allows you to send posts to your TG channel on an interval.
+This Telegram bot built with pyTelegramBotAPI allows you to send posts to your TG channel on an interval, remove captions and send posts in random order.
 
 ## Requirements
 
