@@ -23,7 +23,8 @@ This Telegram bot built with pyTelegramBotAPI allows you to send posts to your T
        "channel_id": -123456789,
        "forward_interval": 60,
        "debug_mode": false,
-       "shuffle": false
+       "shuffle": false,
+       "stripcaptions": true,
    }
    ```
    - Replace `your_bot_token` with your Telegram bot token.
@@ -46,8 +47,6 @@ python bot.py
 - `/dryrun` - Forwards the message back to you without posting it to test correct formatting
 - `/postnow` - Instantly posts a replied message
 - `/remove` - Removes a replied message from the queue
-
-### This bot strips all captions from attachments by default, its an intentional behavior made so to make stealing memes easier. i might change it later but no promises 
 
 #### Huge shout out to [@sethfoxen](https://github.com/sethfoxen) for the original code base and for finally making me stop using that annoying closed source bot with egotistical owners
 
