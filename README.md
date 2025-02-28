@@ -24,7 +24,7 @@ This Telegram bot built with pyTelegramBotAPI allows you to send posts to your T
        "forward_interval": 60,
        "debug_mode": false,
        "shuffle": false,
-       "stripcaptions": true,
+       "removecaptions": true,
    }
    ```
    - Replace `your_bot_token` with your Telegram bot token.
