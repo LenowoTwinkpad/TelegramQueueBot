@@ -22,7 +22,7 @@ def load_config():
         "forward_interval": 60,  # Interval in seconds
         "debug_mode": False,  # Debug mode
         "shuffle": False,  # Enable/disable random message order
-        "stripcaptions": True, # preserves the original caption if false, otherwise removes it
+        "removecaptions": True, # preserves the original caption if false, otherwise removes it
     }
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -70,7 +70,7 @@ def copy_messages():
                 save_queue(message_queue)
         if config["debug_mode"]:
             logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
-        if config["stripcaptions"]:
+        if config["removecaptions"]:
             message = bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
         else:
             message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
@@ -103,7 +103,7 @@ def handle_commands(message: Message):
             keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
             keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
             bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is the next post, it was already selected as a forced message.", reply_markup=keyboard)
-            if config["stripcaptions"]:
+            if config["removecaptions"]:
                 message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message, caption="")
             else:
                 message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message)
@@ -114,7 +114,7 @@ def handle_commands(message: Message):
             forced_message = random.choice(message_queue)
             logging.info(f"Selected message ID {forced_message} for forced posting.")
             bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is now selected for forced posting:", reply_markup=keyboard)
-            if config["stripcaptions"]:
+            if config["removecaptions"]:
                 message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message, caption="")
             else:
                 message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message)
@@ -123,7 +123,7 @@ def handle_commands(message: Message):
             keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
             keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
             bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is the next post:", reply_markup=keyboard)
-            if config["stripcaptions"]:
+            if config["removecaptions"]:
                 message = bot.copy_message(config["admin_id"], config["admin_id"], message_id, caption="")
             else:
                 message = bot.copy_message(config["admin_id"], config["admin_id"], message_id)
@@ -140,7 +140,7 @@ def handle_commands(message: Message):
             bot.send_message(message.chat.id, "you gotta reply to a message to dry run it!(｡•́︿•̀｡)")
             return
         logging.info(f"Dry running message ID {message.reply_to_message.message_id}.")
-        if config["stripcaptions"]:
+        if config["removecaptions"]:
             message = bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
         else:
             message = bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id)
@@ -150,7 +150,7 @@ def handle_commands(message: Message):
             bot.send_message(message.chat.id, "𓀐𓂸. you gotta reply to a message to post it now!")
             return
         logging.info(f"Force posting message ID {message.reply_to_message.message_id} to the channel.")
-        if config["stripcaptions"]:
+        if config["removecaptions"]:
             message = bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
         else:
             message = bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id)
@@ -177,7 +177,7 @@ def handle_callback(call: CallbackQuery):
     bot.answer_callback_query(call.id,"")
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
     if config["shuffle"]:
-        if config["stripcaptions"]:
+        if config["removecaptions"]:
             message = bot.copy_message(config["channel_id"], config["admin_id"], forced_message, caption="")
         else:
             message = bot.copy_message(config["channel_id"], config["admin_id"], forced_message)
@@ -187,7 +187,7 @@ def handle_callback(call: CallbackQuery):
         forced_message = None
         bot.send_message(call.message.chat.id, "Posted")
     elif message_queue:
-        if config["stripcaptions"]:
+        if config["removecaptions"]:
             message = bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
         else:
             message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
