@@ -66,7 +66,7 @@ def copy_messages():
             if config["shuffle"]:
                 message_id = random.choice(message_queue)
             else:
-                message_queue.pop(0)
+                message_id = message_queue[0]
                 save_queue(message_queue)
         if config["debug_mode"]:
             logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
@@ -90,7 +90,7 @@ def is_admin(message: Message):
 
 @bot.message_handler(commands=["start", "ping", "kys", "remove", "dryrun", "postnow"])
 def handle_commands(message: Message):
-    global forced_message
+    global message_queue, forced_message
     if not is_admin(message):
         return
     if config["debug_mode"]:
@@ -124,9 +124,9 @@ def handle_commands(message: Message):
             keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
             bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is the next post:", reply_markup=keyboard)
             if config["removecaptions"]:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], message_id, caption="")
+                message = bot.copy_message(config["admin_id"], config["admin_id"], message_queue[0], caption="")
             else:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], message_id)
+                message = bot.copy_message(config["admin_id"], config["admin_id"], message_queue[0])
         elif not message_queue:
             bot.send_message(message.chat.id, "beep boop, still alive but out of them memes (╥‸╥)")
 
@@ -188,9 +188,9 @@ def handle_callback(call: CallbackQuery):
         bot.send_message(call.message.chat.id, "Posted")
     elif message_queue:
         if config["removecaptions"]:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
+            message = bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0], caption="")
         else:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
+            message = bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0])
         logging.info(f"Force posting message ID {message_queue[0]} to the channel.")
         del message_queue[0]
         save_queue(message_queue)
