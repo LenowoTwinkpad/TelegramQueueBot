@@ -95,41 +95,21 @@ def handle_commands(message: Message):
         return
     if config["debug_mode"]:
         logging.info(f"Received command: {message.text} from {message.chat.id}")
-    
     if message.text == "/ping":
         queue_count = len(message_queue)
-        if config["shuffle"] and forced_message:
-            keyboard = InlineKeyboardMarkup()
-            keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
-            keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
-            bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is the next post, it was already selected as a forced message.", reply_markup=keyboard)
-            if config["removecaptions"]:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message, caption="")
+        if message_queue:
+            # Determine the next post to use as the base for the reply
+            if config["shuffle"] and forced_message:
+                message_id = forced_message
+            elif config["shuffle"] and message_queue:
+                forced_message = random.choice(message_queue)
+                logging.info(f"Selected message ID {forced_message} for forced posting.")
+                message_id = forced_message
             else:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message)
-        elif config["shuffle"] and message_queue:
-            keyboard = InlineKeyboardMarkup()
-            keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
-            keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
-            forced_message = random.choice(message_queue)
-            logging.info(f"Selected message ID {forced_message} for forced posting.")
-            bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is now selected for forced posting:", reply_markup=keyboard)
-            if config["removecaptions"]:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message, caption="")
-            else:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], forced_message)
-        elif message_queue:
-            keyboard = InlineKeyboardMarkup()
-            keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
-            keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
-            bot.send_message(message.chat.id, f"beep boop, still alive. got {queue_count} posts in the queue. this is the next post:", reply_markup=keyboard)
-            if config["removecaptions"]:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], message_queue[0], caption="")
-            else:
-                message = bot.copy_message(config["admin_id"], config["admin_id"], message_queue[0])
-        elif not message_queue:
-            bot.send_message(message.chat.id, "beep boop, still alive but out of them memes (╥‸╥)")
-
+                message_id = message_queue[0]
+            bot.send_message(chat_id=config["admin_id"],text=f"↑↑↑ Next message ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",reply_to_message_id=message_id)
+        else:
+            bot.send_message(message.chat.id, "beep boop, still alive but out of memes (╥‸╥)")
     elif message.text == "/kys":
         bot.send_message(message.chat.id, "okie dokie killing myself ✘_✘")
         bot.stop_polling()
