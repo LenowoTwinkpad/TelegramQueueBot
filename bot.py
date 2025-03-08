@@ -71,9 +71,9 @@ def copy_messages():
         if config["debug_mode"]:
             logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
         if config["removecaptions"]:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
+            bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
         else:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_id)
+            bot.copy_message(config["channel_id"], config["admin_id"], message_id)
         message_queue.remove(message_id)
         save_queue(message_queue)
         time.sleep(config["forward_interval"])
@@ -98,7 +98,6 @@ def handle_commands(message: Message):
     if message.text == "/ping":
         queue_count = len(message_queue)
         if message_queue:
-            # Determine the next post to use as the base for the reply
             if config["shuffle"] and forced_message:
                 message_id = forced_message
             elif config["shuffle"] and message_queue:
@@ -107,9 +106,13 @@ def handle_commands(message: Message):
                 message_id = forced_message
             else:
                 message_id = message_queue[0]
-            bot.send_message(chat_id=config["admin_id"],text=f"↑↑↑ Next message ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",reply_to_message_id=message_id)
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
+            keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
+            bot.send_message(chat_id=config["admin_id"],text=f"↑↑↑ Next message ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",reply_to_message_id=message_id, reply_markup=keyboard)
         else:
             bot.send_message(message.chat.id, "beep boop, still alive but out of memes (╥‸╥)")
+    
     elif message.text == "/kys":
         bot.send_message(message.chat.id, "okie dokie killing myself ✘_✘")
         bot.stop_polling()
@@ -121,22 +124,25 @@ def handle_commands(message: Message):
             return
         logging.info(f"Dry running message ID {message.reply_to_message.message_id}.")
         if config["removecaptions"]:
-            message = bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
+            bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
         else:
-            message = bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id)
+            bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id)
 
     elif message.text == "/postnow":
         if not message.reply_to_message:
             bot.send_message(message.chat.id, "𓀐𓂸. you gotta reply to a message to post it now!")
             return
         logging.info(f"Force posting message ID {message.reply_to_message.message_id} to the channel.")
-        if config["removecaptions"]:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
+        if message.reply_to_message.message_id in message_queue:
+            if config["removecaptions"]:
+                bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
+            else:
+                bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id)
+            message_queue.remove(message.reply_to_message.message_id)
+            save_queue(message_queue)
         else:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id)
-        message_queue.remove(message.reply_to_message.message_id)
-        save_queue(message_queue)
-
+            bot.send_message(message.chat.id, "uh oh, that message isnt in the queue!")
+        
     elif message.text == "/remove":
         if not message.reply_to_message:
             bot.send_message(message.chat.id, "you gotta reply to a message to remove it")
@@ -158,9 +164,9 @@ def handle_callback(call: CallbackQuery):
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
     if config["shuffle"]:
         if config["removecaptions"]:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], forced_message, caption="")
+            bot.copy_message(config["channel_id"], config["admin_id"], forced_message, caption="")
         else:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], forced_message)
+            bot.copy_message(config["channel_id"], config["admin_id"], forced_message)
         logging.info(f"Force posting message ID {forced_message} to the channel.")
         message_queue.remove(forced_message)
         save_queue(message_queue)
@@ -168,9 +174,9 @@ def handle_callback(call: CallbackQuery):
         bot.send_message(call.message.chat.id, "Posted")
     elif message_queue:
         if config["removecaptions"]:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0], caption="")
+            bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0], caption="")
         else:
-            message = bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0])
+            bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0])
         logging.info(f"Force posting message ID {message_queue[0]} to the channel.")
         del message_queue[0]
         save_queue(message_queue)
