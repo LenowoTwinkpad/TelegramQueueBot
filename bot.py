@@ -51,7 +51,8 @@ config = load_config()
 message_queue = load_queue()
 bot = telebot.TeleBot(config["bot_token"])
 
-forced_message = None 
+forced_message = None
+last_ping_id = None
 
 def copy_messages():
     global message_queue, forced_message
@@ -90,12 +91,15 @@ def is_admin(message: Message):
 
 @bot.message_handler(commands=["start", "ping", "kys", "remove", "dryrun", "postnow"])
 def handle_commands(message: Message):
-    global message_queue, forced_message
+    global message_queue, forced_message, last_ping_id
     if not is_admin(message):
         return
     if config["debug_mode"]:
         logging.info(f"Received command: {message.text} from {message.chat.id}")
     if message.text == "/ping":
+        if last_ping_id:
+            bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+            last_ping_id = None
         queue_count = len(message_queue)
         if message_queue:
             if config["shuffle"] and forced_message:
@@ -109,10 +113,11 @@ def handle_commands(message: Message):
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton("Post now", callback_data="postnow"))
             keyboard.add(InlineKeyboardButton("Delete this post", callback_data="delete"))
-            bot.send_message(chat_id=config["admin_id"],text=f"↑↑↑ Next message ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",reply_to_message_id=message_id, reply_markup=keyboard)
+            ping_message = bot.send_message(chat_id=config["admin_id"],text=f"↑↑↑ Next message ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",reply_to_message_id=message_id, reply_markup=keyboard)
+            last_ping_id = ping_message.message_id
         else:
             bot.send_message(message.chat.id, "beep boop, still alive but out of memes (╥‸╥)")
-    
+
     elif message.text == "/kys":
         bot.send_message(message.chat.id, "okie dokie killing myself ✘_✘")
         bot.stop_polling()
@@ -138,7 +143,11 @@ def handle_commands(message: Message):
                 bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
             else:
                 bot.copy_message(config["channel_id"], config["admin_id"], message.reply_to_message.message_id)
+            if last_ping_id:
+                bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+                last_ping_id = None
             message_queue.remove(message.reply_to_message.message_id)
+            bot.send_message(message.chat.id, "posted")
             save_queue(message_queue)
         else:
             bot.send_message(message.chat.id, "uh oh, that message isnt in the queue!")
@@ -154,14 +163,19 @@ def handle_commands(message: Message):
             message_queue.remove(message.reply_to_message.message_id)
             save_queue(message_queue)
             bot.send_message(message.chat.id, "( -_•)▄︻テحكـ━一💥 KABLAM! this message was taken out back and shot.")
+            if last_ping_id:
+                bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+                last_ping_id = None
         else:
             bot.send_message(message.chat.id, "uh oh, that message isnt in the queue!")
 
 @bot.callback_query_handler(func=lambda call: call.data == "postnow")
 def handle_callback(call: CallbackQuery):
-    global message_queue, forced_message
+    global message_queue, forced_message, last_ping_id
     bot.answer_callback_query(call.id,"")
-    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+    if last_ping_id:
+                bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+                last_ping_id = None
     if config["shuffle"]:
         if config["removecaptions"]:
             bot.copy_message(config["channel_id"], config["admin_id"], forced_message, caption="")
@@ -187,9 +201,11 @@ def handle_callback(call: CallbackQuery):
 
 @bot.callback_query_handler(func=lambda call: call.data == "delete")
 def handle_callback(call: CallbackQuery):
-    global message_queue, forced_message
+    global message_queue, forced_message, last_ping_id
     bot.answer_callback_query(call.id,"")
-    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+    if last_ping_id:
+                bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+                last_ping_id = None
     if config["shuffle"] and forced_message:
         message_queue.remove(forced_message)
         save_queue(message_queue)
