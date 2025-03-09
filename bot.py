@@ -55,7 +55,7 @@ forced_message = None
 last_ping_id = None
 
 def copy_messages():
-    global message_queue, forced_message
+    global message_queue, forced_message, last_ping_id
     while True:
         if not message_queue:
             time.sleep(25)
@@ -75,6 +75,9 @@ def copy_messages():
             bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
         else:
             bot.copy_message(config["channel_id"], config["admin_id"], message_id)
+        if last_ping_id:
+            bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+            last_ping_id = None
         message_queue.remove(message_id)
         save_queue(message_queue)
         time.sleep(config["forward_interval"])
