@@ -93,6 +93,17 @@ def is_admin(message: Message):
         return False
     return True
 
+commands = [
+    telebot.types.BotCommand("start", "Starts the bot"),
+    telebot.types.BotCommand("ping", "Checks if the bot is running and shows queue status"),
+    telebot.types.BotCommand("kys", "Stops the bot"),
+    telebot.types.BotCommand("dryrun", "Forwards the message back to you without posting it to test correct formatting"),
+    telebot.types.BotCommand("postnow", "Instantly posts a replied message"),
+    telebot.types.BotCommand("remove", "Removes a replied message from the queue"),
+    telebot.types.BotCommand("isinqueue", "Returns true if the message is in queue, otherwise returns false")
+]
+bot.set_my_commands(commands)
+
 @bot.message_handler(commands=["start", "ping", "kys", "remove", "dryrun", "postnow", "isinqueue"])
 def handle_commands(message: Message):
     global message_queue, forced_message, last_ping_id
@@ -145,6 +156,8 @@ def handle_commands(message: Message):
             bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id, caption="")
         else:
             bot.copy_message(config["admin_id"], config["admin_id"], message.reply_to_message.message_id)
+        if message.reply_to_message.message_id not in message_queue:
+            bot.send_message(message.chat.id, "just fyi, that message isnt in the queue")
 
     elif message.text == "/postnow":
         if not message.reply_to_message:
@@ -251,7 +264,11 @@ if __name__ == "__main__":
             bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
         except requests.exceptions.ReadTimeout:
             logging.warning("Read timeout occurred, retrying polling...")
+            if config["debug_mode"]:
+                bot.send_message(config["admin_id"], "Read timeout occurred, retrying polling...")
             time.sleep(5)
         except Exception as e:
             logging.error(f"Unexpected error: {e}, restarting polling...")
+            if config["debug_mode"]:
+                bot.send_message(config["admin_id"], f"Unexpected error: {e}, restarting polling...")
             time.sleep(5)
