@@ -80,6 +80,7 @@ def copy_messages():
             last_ping_id = None
         message_queue.remove(message_id)
         save_queue(message_queue)
+        bot.set_message_reaction(config["admin_id"], message_id, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
         time.sleep(config["forward_interval"])
 
 def start_forwarding():
@@ -121,20 +122,20 @@ def handle_commands(message: Message):
         else:
             bot.send_message(message.chat.id, "beep boop, still alive but out of memes (╥‸╥)")
 
-    elif message.text == "/isinqueue":
-    	if not message.reply_to_message:
-        	bot.send_message(message.chat.id, "reply to a message to check if its in the queue")
-            return
-    	if message.reply_to_message.message_id in message_queue:
-        	bot.send_message(message.chat.id, "true")
-    	else:
-        	bot.send_message(message.chat.id, "false")
-    
     elif message.text == "/kys":
         bot.send_message(message.chat.id, "okie dokie killing myself ✘_✘")
         bot.stop_polling()
         os._exit(1)
-      
+    
+    elif message.text == "/isinqueue":
+        if not message.reply_to_message:
+            bot.send_message(message.chat.id, "reply to a message to check if its in the queue")
+            return
+        if message.reply_to_message.message_id in message_queue:
+            bot.send_message(message.chat.id, "true")
+        else:
+            bot.send_message(message.chat.id, "false")
+
     elif message.text == "/dryrun":
         if not message.reply_to_message:
             bot.send_message(message.chat.id, "you gotta reply to a message to dry run it!(｡•́︿•̀｡)")
@@ -241,6 +242,7 @@ def handle_new_message(message: Message):
         logging.info(f"Received message from {message.chat.id}: {message.content_type}. Added to the queue as ID {message.message_id}")
     message_queue.append(message.message_id)
     save_queue(message_queue)
+    bot.set_message_reaction(message.chat.id, message.message_id, [telebot.types.ReactionTypeEmoji(emoji="👍")])
 
 if __name__ == "__main__":
     start_forwarding()
