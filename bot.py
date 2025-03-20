@@ -92,7 +92,7 @@ def is_admin(message: Message):
         return False
     return True
 
-@bot.message_handler(commands=["start", "ping", "kys", "remove", "dryrun", "postnow"])
+@bot.message_handler(commands=["start", "ping", "kys", "remove", "dryrun", "postnow", "isinqueue"])
 def handle_commands(message: Message):
     global message_queue, forced_message, last_ping_id
     if not is_admin(message):
@@ -121,6 +121,15 @@ def handle_commands(message: Message):
         else:
             bot.send_message(message.chat.id, "beep boop, still alive but out of memes (╥‸╥)")
 
+    elif message.text == "/isinqueue":
+    	if not message.reply_to_message:
+        	bot.send_message(message.chat.id, "reply to a message to check if its in the queue")
+            return
+    	if message.reply_to_message.message_id in message_queue:
+        	bot.send_message(message.chat.id, "true")
+    	else:
+        	bot.send_message(message.chat.id, "false")
+    
     elif message.text == "/kys":
         bot.send_message(message.chat.id, "okie dokie killing myself ✘_✘")
         bot.stop_polling()
