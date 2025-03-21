@@ -175,6 +175,7 @@ def handle_commands(message: Message):
             message_queue.remove(message.reply_to_message.message_id)
             bot.send_message(message.chat.id, "posted")
             save_queue(message_queue)
+            bot.set_message_reaction(config["admin_id"], message.reply_to_message.message_id, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
         else:
             bot.send_message(message.chat.id, "uh oh, that message isnt in the queue!")
         
@@ -192,6 +193,7 @@ def handle_commands(message: Message):
             if last_ping_id:
                 bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
                 last_ping_id = None
+            bot.set_message_reaction(config["admin_id"], message.reply_to_message.message_id, [telebot.types.ReactionTypeEmoji(emoji="💔")])
         else:
             bot.send_message(message.chat.id, "uh oh, that message isnt in the queue!")
 
@@ -207,6 +209,7 @@ def handle_callback(call: CallbackQuery):
             bot.copy_message(config["channel_id"], config["admin_id"], forced_message, caption="")
         else:
             bot.copy_message(config["channel_id"], config["admin_id"], forced_message)
+        bot.set_message_reaction(config["admin_id"], forced_message, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
         logging.info(f"Force posting message ID {forced_message} to the channel.")
         message_queue.remove(forced_message)
         save_queue(message_queue)
@@ -217,6 +220,7 @@ def handle_callback(call: CallbackQuery):
             bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0], caption="")
         else:
             bot.copy_message(config["channel_id"], config["admin_id"], message_queue[0])
+        bot.set_message_reaction(config["admin_id"], message_queue[0], [telebot.types.ReactionTypeEmoji(emoji="⚡")])
         logging.info(f"Force posting message ID {message_queue[0]} to the channel.")
         del message_queue[0]
         save_queue(message_queue)
@@ -238,11 +242,13 @@ def handle_callback(call: CallbackQuery):
         logging.info(f"Deleting message ID {forced_message} from the queue.")
         forced_message = None
         bot.send_message(call.message.chat.id, "Removed")
+        bot.set_message_reaction(config["admin_id"], forced_message, [telebot.types.ReactionTypeEmoji(emoji="💔")])
     elif message_queue:
         logging.info(f"Deleting message ID {message_queue[0]} from the queue.")
         del message_queue[0]
         save_queue(message_queue)
         bot.send_message(call.message.chat.id, "Removed")
+        bot.set_message_reaction(config["admin_id"], message_queue[0], [telebot.types.ReactionTypeEmoji(emoji="💔")])
     else:
         logging.error("Unexpected error in callback_query_handler delete")
         bot.send_message(call.message.chat.id, "Unexpected error.")
