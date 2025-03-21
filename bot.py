@@ -240,15 +240,15 @@ def handle_callback(call: CallbackQuery):
         message_queue.remove(forced_message)
         save_queue(message_queue)
         logging.info(f"Deleting message ID {forced_message} from the queue.")
+        bot.set_message_reaction(config["admin_id"], forced_message, [telebot.types.ReactionTypeEmoji(emoji="💔")])
         forced_message = None
         bot.send_message(call.message.chat.id, "Removed")
-        bot.set_message_reaction(config["admin_id"], forced_message, [telebot.types.ReactionTypeEmoji(emoji="💔")])
     elif message_queue:
         logging.info(f"Deleting message ID {message_queue[0]} from the queue.")
-        del message_queue[0]
-        save_queue(message_queue)
         bot.send_message(call.message.chat.id, "Removed")
         bot.set_message_reaction(config["admin_id"], message_queue[0], [telebot.types.ReactionTypeEmoji(emoji="💔")])
+        del message_queue[0]
+        save_queue(message_queue)
     else:
         logging.error("Unexpected error in callback_query_handler delete")
         bot.send_message(call.message.chat.id, "Unexpected error.")
