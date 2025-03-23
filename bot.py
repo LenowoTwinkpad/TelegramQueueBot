@@ -271,29 +271,18 @@ def handle_new_message(message: Message):
     save_queue(message_queue)
     bot.set_message_reaction(message.chat.id, message.message_id, [telebot.types.ReactionTypeEmoji(emoji="👍")])
 
-def is_connected():
-    try:
-        socket.create_connection(("8.8.8.8", 53), timeout=5)
-        return True
-    except OSError:
-        return False
-
 if __name__ == "__main__":
     start_forwarding()
     while True:
-        if is_connected():
-            try:
-                bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
-            except requests.exceptions.ReadTimeout:
-                logging.warning("Read timeout occurred, retrying polling...")
-                if config["debug_mode"]:
-                    bot.send_message(config["admin_id"], "Read timeout occurred, retrying polling...")
-                time.sleep(5)
-            except Exception as e:
-                logging.error(f"Unexpected error: {e}, restarting polling...")
-                if config["debug_mode"]:
-                    bot.send_message(config["admin_id"], f"Unexpected error: {e}, restarting polling...")
-                time.sleep(5)
-        else:
-            logging.error("No internet connection. Retrying in 10 seconds...")
-            time.sleep(10)
+        try:
+            bot.polling(none_stop=True, timeout=20, long_polling_timeout=20)
+        except requests.exceptions.ReadTimeout:
+            logging.warning("Read timeout occurred, retrying polling...")
+            if config["debug_mode"]:
+                bot.send_message(config["admin_id"], "Read timeout occurred, retrying polling...")
+            time.sleep(5)
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}, restarting polling...")
+            if config["debug_mode"]:
+                bot.send_message(config["admin_id"], f"Unexpected error: {e}, restarting polling...")
+            time.sleep(5)
