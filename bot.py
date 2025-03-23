@@ -7,6 +7,7 @@ import threading
 import time
 import requests
 import random
+import socket
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -57,31 +58,38 @@ last_ping_id = None
 def copy_messages():
     global message_queue, forced_message, last_ping_id
     while True:
-        if not message_queue:
-            time.sleep(25)
-            continue
-        if forced_message:
-            message_id = forced_message
-            forced_message = None
-        else:
-            if config["shuffle"]:
-                message_id = random.choice(message_queue)
+        try:
+            if not message_queue:
+                time.sleep(25)
+                continue
+            if forced_message:
+                message_id = forced_message
+                forced_message = None
             else:
-                message_id = message_queue[0]
-                save_queue(message_queue)
-        if config["debug_mode"]:
-            logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
-        if config["removecaptions"]:
-            bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
-        else:
-            bot.copy_message(config["channel_id"], config["admin_id"], message_id)
-        if last_ping_id:
-            bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
-            last_ping_id = None
-        message_queue.remove(message_id)
-        save_queue(message_queue)
-        bot.set_message_reaction(config["admin_id"], message_id, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
-        time.sleep(config["forward_interval"])
+                if config["shuffle"]:
+                    message_id = random.choice(message_queue)
+                else:
+                    message_id = message_queue[0]
+                    save_queue(message_queue)
+            if config["debug_mode"]:
+                logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
+            if config["removecaptions"]:
+                bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
+            else:
+                bot.copy_message(config["channel_id"], config["admin_id"], message_id)
+            if last_ping_id:
+                bot.edit_message_reply_markup(config["admin_id"], last_ping_id, reply_markup=None)
+                last_ping_id = None
+            message_queue.remove(message_id)
+            save_queue(message_queue)
+            bot.set_message_reaction(config["admin_id"], message_id, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
+            time.sleep(config["forward_interval"])
+        except requests.exceptions.ReadTimeout:
+            logging.warning("Read timeout, retrying...")
+            time.sleep(5)
+        except Exception as e:
+            logging.error(f"Error in copy_messages: {e}")
+            time.sleep(5)
 
 def start_forwarding():
     thread = threading.Thread(target=copy_messages, daemon=True)
@@ -263,18 +271,29 @@ def handle_new_message(message: Message):
     save_queue(message_queue)
     bot.set_message_reaction(message.chat.id, message.message_id, [telebot.types.ReactionTypeEmoji(emoji="👍")])
 
+def is_connected():
+    try:
+        socket.create_connection(("8.8.8.8", 53), timeout=5)
+        return True
+    except OSError:
+        return False
+
 if __name__ == "__main__":
     start_forwarding()
     while True:
-        try:
-            bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
-        except requests.exceptions.ReadTimeout:
-            logging.warning("Read timeout occurred, retrying polling...")
-            if config["debug_mode"]:
-                bot.send_message(config["admin_id"], "Read timeout occurred, retrying polling...")
-            time.sleep(5)
-        except Exception as e:
-            logging.error(f"Unexpected error: {e}, restarting polling...")
-            if config["debug_mode"]:
-                bot.send_message(config["admin_id"], f"Unexpected error: {e}, restarting polling...")
-            time.sleep(5)
+        if is_connected():
+            try:
+                bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
+            except requests.exceptions.ReadTimeout:
+                logging.warning("Read timeout occurred, retrying polling...")
+                if config["debug_mode"]:
+                    bot.send_message(config["admin_id"], "Read timeout occurred, retrying polling...")
+                time.sleep(5)
+            except Exception as e:
+                logging.error(f"Unexpected error: {e}, restarting polling...")
+                if config["debug_mode"]:
+                    bot.send_message(config["admin_id"], f"Unexpected error: {e}, restarting polling...")
+                time.sleep(5)
+        else:
+            logging.error("No internet connection. Retrying in 10 seconds...")
+            time.sleep(10)
