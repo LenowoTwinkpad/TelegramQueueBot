@@ -264,18 +264,8 @@ def handle_new_message(message: Message):
     bot.set_message_reaction(message.chat.id, message.message_id, [telebot.types.ReactionTypeEmoji(emoji="👍")])
 
 start_forwarding()
-timeout_backoff = 5
 while True:
     try:
-        bot.polling(none_stop=True, timeout=30, long_polling_timeout=30)
-        timeout_backoff = 5
-    except (requests.exceptions.ReadTimeout,
-            requests.exceptions.ConnectionError,
-            socket.timeout) as e:
-        logging.warning(f"Network error ({type(e).__name__}), retrying in {timeout_backoff}s...")
-        time.sleep(timeout_backoff)
-        if timeout_backoff <= 120:
-            timeout_backoff = timeout_backoff + 5
+        bot.infinity_polling()
     except Exception as e:
-        logging.error(f"Unexpected error: {type(e).__name__}")
-        time.sleep(timeout_backoff)
+        logging.error(f"Error while polling: {type(e).__name__}")
