@@ -27,9 +27,6 @@ This Telegram bot built with pyTelegramBotAPI allows you to send posts to your T
        "remove_captions": false
    }
    ```
-   - Replace `your_bot_token` with your Telegram bot token.
-   - Replace `admin_id` with your Telegram user ID.
-   - Replace `channel_id` with your target channel ID.
 
 ## Usage
 
