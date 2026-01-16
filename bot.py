@@ -15,15 +15,17 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 QUEUE_PATH = os.path.join(BASE_DIR, "message_queue.json")
 
+queue_lock = threading.Lock()
+
 def load_config():
     default_config = {
-        "bot_token": "your_bot_token",  # Create your bot using BotFather
-        "admin_id": 123456789,  # Telegram user ID of the admin
-        "channel_id": -123456789,  # Channel or group ID
-        "forward_interval": 60,  # Interval in seconds
-        "debug_mode": False,  # Debug mode
-        "shuffle": False,  # Enable/disable random message order
-        "removecaptions": True, # Preserves the original caption if false, otherwise removes it
+        "bot_token": "123456789",
+        "admin_id": 123456789,
+        "channel_id": -123456789,
+        "forward_interval": 60,
+        "debug_mode": False,
+        "shuffle": False,
+        "remove_captions": False,
     }
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -38,13 +40,11 @@ def load_queue():
     try:
         with open(QUEUE_PATH, "r") as f:
             return json.load(f)
-
     except FileNotFoundError:
         logging.info(f"Queue file not found at {QUEUE_PATH}. Creating an empty one.")
         with open(QUEUE_PATH, "w") as f:
             json.dump([], f)
         return []
-
     except Exception as e:
         logging.error(f"Failed to load queue.json: {type(e).__name__}")
         logging.error("Shutting down")
@@ -65,21 +65,27 @@ def copy_messages():
     global message_queue
     while True:
         try:
-            if not message_queue:
+            message_id = None
+            
+            with queue_lock:
+                if not message_queue:
+                    pass 
+                else:
+                    if config["shuffle"]:
+                        index = random.randrange(len(message_queue))
+                        message_id = message_queue.pop(index)
+                    else:
+                        message_id = message_queue.pop(0)
+                    save_queue(message_queue)
+
+            if message_id is None:
                 time.sleep(25)
                 continue
-
-            if config["shuffle"]:
-                message_id = message_queue.pop(random.randrange(len(message_queue)))
-            else:
-                message_id = message_queue.pop(0)
-
-            save_queue(message_queue)
 
             if config["debug_mode"]:
                 logging.info(f"Copying message ID {message_id} from admin {config['admin_id']} to {config['channel_id']}")
 
-            if config["removecaptions"]:
+            if config["remove_captions"]:
                 bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
             else:
                 bot.copy_message(config["channel_id"], config["admin_id"], message_id)
@@ -88,7 +94,7 @@ def copy_messages():
             time.sleep(config["forward_interval"])
 
         except Exception as e:
-            logging.error(f"An error occurred: {type(e).__name__}")
+            logging.error(f"An error occurred in copy_messages: {type(e).__name__}")
             time.sleep(5)
 
 
@@ -120,17 +126,19 @@ def handle_commands(message: Message):
         logging.info(f"Received command: {message.text} from {message.chat.id}")
 
     if message.text == "/ping":
-        queue_count = len(message_queue)
-        if message_queue:
-            if not config["shuffle"]:
-                message_id_to_show = message_queue[0]
+        with queue_lock:
+            queue_count = len(message_queue)
+            first_msg_id = message_queue[0] if message_queue else None
+
+        if queue_count > 0:
+            if not config["shuffle"] and first_msg_id:
                 keyboard = InlineKeyboardMarkup()
-                keyboard.add(InlineKeyboardButton("Post now", callback_data=f"postnow:{message_id_to_show}"))
-                keyboard.add(InlineKeyboardButton("Delete this post", callback_data=f"delete:{message_id_to_show}"))
+                keyboard.add(InlineKeyboardButton("Post now", callback_data=f"postnow:{first_msg_id}"))
+                keyboard.add(InlineKeyboardButton("Delete this post", callback_data=f"delete:{first_msg_id}"))
                 bot.send_message(
                 chat_id=config["admin_id"],
-                text=f"↑↑↑ Next message (ID: {message_id_to_show}) ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",
-                reply_to_message_id=message_id_to_show,
+                text=f"↑↑↑ Next message (ID: {first_msg_id}) ↑↑↑\nbeep boop, still alive. Got {queue_count} posts in the queue.",
+                reply_to_message_id=first_msg_id,
                 reply_markup=keyboard
                 )
             else:
@@ -138,7 +146,6 @@ def handle_commands(message: Message):
                 chat_id=config["admin_id"],
                 text=f"beep boop, still alive. Got {queue_count} posts in the queue. next post not shown since shuffle=true in config.",
                 )
-
         else:
             bot.send_message(message.chat.id, "beep boop, still alive but out of memes (╥‸╥)")
 
@@ -151,7 +158,11 @@ def handle_commands(message: Message):
         if not message.reply_to_message:
             bot.send_message(message.chat.id, "reply to a message to check if its in the queue")
             return
-        if message.reply_to_message.message_id in message_queue:
+        
+        with queue_lock:
+            in_queue = message.reply_to_message.message_id in message_queue
+
+        if in_queue:
             bot.send_message(message.chat.id, "true")
             bot.set_message_reaction(config["admin_id"], message.reply_to_message.message_id, [telebot.types.ReactionTypeEmoji(emoji="👍")])
         else:
@@ -164,17 +175,24 @@ def handle_commands(message: Message):
             return
 
         message_id_to_post = message.reply_to_message.message_id
+        
+        # Lock for checking AND removing safely
+        with queue_lock:
+            if message_id_to_post in message_queue:
+                message_queue.remove(message_id_to_post)
+                save_queue(message_queue)
+                found = True
+            else:
+                found = False
 
-        if message_id_to_post in message_queue:
+        if found:
             logging.info(f"Force posting message ID {message_id_to_post} to the channel.")
             try:
-                if config["removecaptions"]:
+                if config["remove_captions"]:
                     bot.copy_message(config["channel_id"], config["admin_id"], message_id_to_post, caption="")
                 else:
                     bot.copy_message(config["channel_id"], config["admin_id"], message_id_to_post)
 
-                message_queue.remove(message_id_to_post)
-                save_queue(message_queue)
                 bot.send_message(message.chat.id, "posted")
                 bot.set_message_reaction(config["admin_id"], message_id_to_post, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
             except Exception as e:
@@ -191,17 +209,22 @@ def handle_commands(message: Message):
 
         message_id_to_remove = message.reply_to_message.message_id
 
-        if message_id_to_remove in message_queue:
+        with queue_lock:
+            if message_id_to_remove in message_queue:
+                message_queue.remove(message_id_to_remove)
+                save_queue(message_queue)
+                found = True
+            else:
+                found = False
+
+        if found:
             logging.info(f"Deleting message ID {message_id_to_remove} from the queue.")
-            message_queue.remove(message_id_to_remove)
-            save_queue(message_queue)
             bot.send_message(message.chat.id, "( -_•)▄︻テحكـ━一💥 KABLAM! this message was taken out back and shot.")
             bot.set_message_reaction(config["admin_id"], message_id_to_remove, [telebot.types.ReactionTypeEmoji(emoji="💔")])
         else:
             bot.set_message_reaction(config["admin_id"], message_id_to_remove, [telebot.types.ReactionTypeEmoji(emoji="💔")])
             bot.send_message(message.chat.id, "uh oh, that message isnt in the queue!")
 
-#by god's grace hope this works 🙏🏻🙏🏻🙏🏻🙏🏻
 @bot.callback_query_handler(func=lambda call: call.data.startswith(("postnow:", "delete:")))
 def handle_callback(call: CallbackQuery):
     global message_queue
@@ -221,7 +244,10 @@ def handle_callback(call: CallbackQuery):
     except Exception as e:
         logging.warning(f"Failed to remove inline keyboard from ping message: {type(e).__name__}")
 
-    if message_id not in message_queue:
+    with queue_lock:
+        exists = message_id in message_queue
+
+    if not exists:
         logging.error(f"Callback postnow received but message ID {message_id} is no longer in the queue.")
         bot.send_message(call.message.chat.id, f"Message ID {message_id} is no longer in the queue.")
         return
@@ -229,13 +255,17 @@ def handle_callback(call: CallbackQuery):
     if action == "postnow":
         logging.info(f"Callback: Force posting message ID {message_id} to the channel.")
         try:
-            if config["removecaptions"]:
+            if config["remove_captions"]:
                 bot.copy_message(config["channel_id"], config["admin_id"], message_id, caption="")
             else:
                 bot.copy_message(config["channel_id"], config["admin_id"], message_id)
 
-            message_queue.remove(message_id)
-            save_queue(message_queue)
+            # Remove safely
+            with queue_lock:
+                if message_id in message_queue:
+                    message_queue.remove(message_id)
+                    save_queue(message_queue)
+
             bot.send_message(call.message.chat.id, "Posted")
             bot.set_message_reaction(config["admin_id"], message_id, [telebot.types.ReactionTypeEmoji(emoji="⚡")])
         except Exception as e:
@@ -245,8 +275,11 @@ def handle_callback(call: CallbackQuery):
     elif action == "delete":
         logging.info(f"Callback: Deleting message ID {message_id} from the queue.")
         try:
-            message_queue.remove(message_id)
-            save_queue(message_queue)
+            with queue_lock:
+                if message_id in message_queue:
+                    message_queue.remove(message_id)
+                    save_queue(message_queue)
+
             bot.send_message(call.message.chat.id, "Removed")
             bot.set_message_reaction(config["admin_id"], message_id, [telebot.types.ReactionTypeEmoji(emoji="💔")])
         except Exception as e:
@@ -255,12 +288,15 @@ def handle_callback(call: CallbackQuery):
 
 
 @bot.message_handler(func=lambda message: is_admin(message) and (message.text is None or not message.text.startswith('/')) and message.reply_to_message is None, content_types=["text", "photo", "video", "document", "animation"])
-#↑↑↑LONG!↑↑↑
 def handle_new_message(message: Message):
     if config["debug_mode"]:
         logging.info(f"Received message from {message.chat.id}: {message.content_type}. Added to the queue as ID {message.message_id}")
-    message_queue.append(message.message_id)
-    save_queue(message_queue)
+    
+    # LOCK FOR WRITE
+    with queue_lock:
+        message_queue.append(message.message_id)
+        save_queue(message_queue)
+        
     bot.set_message_reaction(message.chat.id, message.message_id, [telebot.types.ReactionTypeEmoji(emoji="👍")])
 
 start_forwarding()
@@ -269,3 +305,4 @@ while True:
         bot.infinity_polling()
     except Exception as e:
         logging.error(f"Error while polling: {type(e).__name__}")
+        time.sleep(5)
