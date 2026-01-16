@@ -18,13 +18,13 @@ This Telegram bot built with pyTelegramBotAPI allows you to send posts to your T
 3. Create a `config.json` file in the same directory as `bot.py` with the following structure:
    ```json
    {
-       "bot_token": "your_bot_token",
+       "bot_token": "123456789",
        "admin_id": 123456789,
        "channel_id": -123456789,
        "forward_interval": 60,
        "debug_mode": false,
        "shuffle": false,
-       "removecaptions": false
+       "remove_captions": false
    }
    ```
    - Replace `your_bot_token` with your Telegram bot token.
@@ -44,13 +44,8 @@ python bot.py
 - `/start` - Starts the bot
 - `/ping` - Checks if the bot is running and shows queue status
 - `/kys` - Stops the bot
-- `/dryrun` - Forwards the message back to you without posting it to test correct formatting
 - `/postnow` - Instantly posts a replied message
 - `/remove` - Removes a replied message from the queue
 - `/isinqueue` - Returns true if the message is in queue, otherwise returns false"
 
 ### Bot doesnt support grouped attachments/albums yet, they will be added to the queue as separate messages. will be fixed one day.
-
-### Huge shout out to [@sethfoxen](https://github.com/sethfoxen) for the original code base and for finally making me stop using that annoying closed source bot with egotistical owners
-
-### Disclaimer: Some code for this bot was Ai-generated before i stopped being a lazy dumbass and started learning python like a big boy
